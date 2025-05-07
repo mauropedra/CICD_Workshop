@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: latest
+  pre_build:
+    commands:
+      - cd ./my-app
+      - echo Installing python packages...
+      - python -m venv .venv
+      - . .venv/bin/activate
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - echo run tests...
+      - python -m pytest

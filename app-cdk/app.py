@@ -5,8 +5,10 @@ import aws_cdk as cdk
 
 from app_cdk.app_cdk_stack import AppCdkStack
 from app_cdk.pipeline_cdk_stack import PipelineCdkStack
+from app_cdk.ecr_cdk_stack import EcrCdkStack
 
 app = cdk.App()
+
 AppCdkStack(app, "AppCdkStack",
     # If you don't specify 'env', this stack will be environment-agnostic.
     # Account/Region-dependent features and context lookups will not work,
@@ -25,9 +27,15 @@ AppCdkStack(app, "AppCdkStack",
     # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
     )
 
+ecr_stack = EcrCdkStack(
+    app,
+    'ecr-stack'
+)
+
 pipeline_stack = PipelineCdkStack(
     app,
     'pipeline-stack',
+    ecr_repository = ecr_stack.ecr_data,
 )
 
 app.synth()

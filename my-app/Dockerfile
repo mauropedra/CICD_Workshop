@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/python:3.7-slim-buster AS development
+FROM public.ecr.aws/docker/library/python:3.9-alpine AS development
 
 WORKDIR /app
 

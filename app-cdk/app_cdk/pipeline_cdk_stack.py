@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_codebuild as codebuild,
     aws_codepipeline_actions as codepipeline_actions,
     aws_iam as iam,
+    aws_ssm as ssm,
 )
 
 class PipelineCdkStack(Stack):
@@ -77,6 +78,31 @@ class PipelineCdkStack(Stack):
                 'ecr:UploadLayerPart',
                 'ecr:CompleteLayerUpload',
                 'ecr:PutImage'
+            ],
+            resources = ['*'],
+        ))
+
+        ssmParameter = ssm.StringParameter(
+            self, 'SignerProfileARN',
+            parameter_name='signer-profile-arn',
+            string_value='arn:aws:signer:us-east-2:676393689272:/signing-profiles/ecr_signing_profile'
+        )
+   
+        docker_build_project.add_to_role_policy(iam.PolicyStatement(
+            effect = iam.Effect.ALLOW,
+            actions = [
+                'ssm:GetParametersByPath',
+                'ssm:GetParameters',
+            ],
+            resources = ['*'],
+        ))
+
+        docker_build_project.add_to_role_policy(iam.PolicyStatement(
+            effect = iam.Effect.ALLOW,
+            actions = [
+                'signer:PutSigningProfile',
+                'signer:SignPayload',
+                'signer:GetRevocationStatus'
             ],
             resources = ['*'],
         ))

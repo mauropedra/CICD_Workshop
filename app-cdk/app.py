@@ -24,6 +24,7 @@ pipeline_stack = PipelineCdkStack(
     app,
     'pipeline-stack',
     ecr_repository = ecr_stack.ecr_data,
+    test_app_fargate = test_app_stack.ecs_service_data,
 )
 
 app.synth()

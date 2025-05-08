@@ -13,7 +13,7 @@ from aws_cdk import (
 
 class PipelineCdkStack(Stack):
 
-    def __init__(self, scope: Construct, id: str, ecr_repository, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, ecr_repository, test_app_fargate, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # Creates a CodeConnections resource called 'CICD_Workshop_Connection'
@@ -148,6 +148,17 @@ class PipelineCdkStack(Stack):
         pipeline.add_stage(
             stage_name = 'Docker-Push-ECR',
             actions = [docker_build_action]
+        )
+
+        pipeline.add_stage(
+            stage_name = 'Deploy-Test',
+            actions = [
+                codepipeline_actions.EcsDeployAction(
+                    action_name = 'Deploy-Fargate-Test',
+                    service = test_app_fargate.service,
+                    input = docker_build_output
+                )
+            ]
         )
 
         CfnOutput(

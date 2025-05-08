@@ -36,3 +36,8 @@ phases:
       - export IMAGE_SHA_ARN=$IMAGE_REPO_URI@$IMAGE_SHA
       - notation sign $IMAGE_SHA_ARN --plugin com.amazonaws.signer.notation.plugin --id $SIGNER_PROFILE_ARN
       - notation inspect $IMAGE_SHA_ARN
+      - echo Writing image definitions file...
+      - printf '[{"name":"my-app","imageUri":"%s"}]' $IMAGE_REPO_URI:$IMAGE_TAG > $CODEBUILD_SRC_DIR/imagedefinitions.json
+
+artifacts:
+  files: imagedefinitions.json

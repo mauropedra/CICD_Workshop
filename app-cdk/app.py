@@ -20,11 +20,18 @@ test_app_stack = AppCdkStack(
     ecr_repository = ecr_stack.ecr_data
 )
 
+prod_app_stack = AppCdkStack(
+    app,
+    'prod-app-stack',
+    ecr_repository = ecr_stack.ecr_data
+)
+
 pipeline_stack = PipelineCdkStack(
     app,
     'pipeline-stack',
     ecr_repository = ecr_stack.ecr_data,
     test_app_fargate = test_app_stack.ecs_service_data,
+    prod_app_fargate = prod_app_stack.ecs_service_data,
 )
 
 app.synth()

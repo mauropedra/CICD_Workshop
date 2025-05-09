@@ -1,0 +1,24 @@
+{
+    "executionRoleArn": "arn:aws:iam::676393689272:role/prod-app-stack-serviceTaskDefExecutionRole39FD5935-f88EMdbtyR99",
+    "containerDefinitions": [
+        {
+            "name": "my-app",
+            "image": "676393689272.dkr.ecr.us-east-2.amazonaws.com/ecr-stack-myapp0cc8c715-faht7zoao28e:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8081,
+                    "hostPort": 8081,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true
+        }
+    ],
+    "family": "prodappstackserviceTaskDef3574354D",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "512",
+    "memory": "1024"
+}

@@ -1,0 +1,9 @@
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:us-east-2:676393689272:task-definition/prodappstackserviceTaskDef3574354D:2"
+        LoadBalancerInfo:
+          ContainerName: "my-app"
+          ContainerPort: 8081

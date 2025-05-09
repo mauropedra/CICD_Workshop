@@ -9,11 +9,12 @@ from aws_cdk import (
     aws_codepipeline_actions as codepipeline_actions,
     aws_iam as iam,
     aws_ssm as ssm,
+    aws_codedeploy as codedeploy,
 )
 
 class PipelineCdkStack(Stack):
 
-        def __init__(self, scope: Construct, id: str, ecr_repository, test_app_fargate, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, ecr_repository, test_app_fargate, prod_app_fargate, green_target_group, green_load_balancer_listener, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # Creates a CodeConnections resource called 'CICD_Workshop_Connection'
@@ -157,6 +158,41 @@ class PipelineCdkStack(Stack):
                     action_name = 'Deploy-Fargate-Test',
                     service = test_app_fargate.service,
                     input = docker_build_output
+                )
+            ]
+        )
+
+        ecs_code_deploy_app = codedeploy.EcsApplication(
+            self, 'my-app',
+            application_name = 'my-app'
+        )
+
+        prod_ecs_deployment_group = codedeploy.EcsDeploymentGroup(
+            self, 'my-app-dg',
+            service = prod_app_fargate.service,
+            blue_green_deployment_config = codedeploy.EcsBlueGreenDeploymentConfig(
+                blue_target_group = prod_app_fargate.target_group,
+                green_target_group = green_target_group,
+                listener = prod_app_fargate.listener,
+                test_listener = green_load_balancer_listener
+            ),
+            deployment_config = codedeploy.EcsDeploymentConfig.LINEAR_10_PERCENT_EVERY_1_MINUTES,
+            application = ecs_code_deploy_app
+        )       
+
+        pipeline.add_stage(
+            stage_name = 'Deploy-Production',
+            actions = [
+                codepipeline_actions.ManualApprovalAction(
+                    action_name = 'Approve-Prod-Deploy',
+                    run_order = 1
+                ),
+                codepipeline_actions.CodeDeployEcsDeployAction(
+                    action_name = 'ABlueGreen-deployECS',
+                    deployment_group = prod_ecs_deployment_group,
+                    app_spec_template_input = source_output,
+                    task_definition_template_input = source_output,
+                    run_order = 2
                 )
             ]
         )

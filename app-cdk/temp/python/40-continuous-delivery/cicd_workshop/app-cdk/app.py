@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import os
-
 import aws_cdk as cdk
 
 from app_cdk.app_cdk_stack import AppCdkStack
@@ -31,6 +29,7 @@ pipeline_stack = PipelineCdkStack(
     'pipeline-stack',
     ecr_repository = ecr_stack.ecr_data,
     test_app_fargate = test_app_stack.ecs_service_data,
+    prod_app_fargate = prod_app_stack.ecs_service_data,
 )
 
 app.synth()

@@ -3,34 +3,32 @@ from constructs import Construct
 from aws_cdk import (
     Stack,
     CfnOutput,
-    aws_codeconnections as codeconnections,
+    aws_codecommit as codecommit,
     aws_codepipeline as codepipeline,
     aws_codebuild as codebuild,
     aws_codepipeline_actions as codepipeline_actions,
     aws_iam as iam,
-    aws_ssm as ssm,
 )
 
 class PipelineCdkStack(Stack):
 
-        def __init__(self, scope: Construct, id: str, ecr_repository, test_app_fargate, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, ecr_repository, test_app_fargate, prod_app_fargate, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        # Creates a CodeConnections resource called 'CICD_Workshop_Connection'
-        SourceConnection = codeconnections.CfnConnection(self, "CICD_Workshop",
-                connection_name="CICD_Workshop_Connection",
-                provider_type="GitHub",
+        # Creates a CodeCommit repository called 'CICD_Workshop'
+        repo = codecommit.Repository(
+            self, 'CICD_Workshop',
+            repository_name = 'CICD_Workshop',
+            description = 'Repository for my application code and infrastructure'
         )
 
         pipeline = codepipeline.Pipeline(
             self, 'CICD_Pipeline',
-            cross_account_keys = False,
-            pipeline_type=codepipeline.PipelineType.V2,
-            execution_mode=codepipeline.ExecutionMode.QUEUED
+            cross_account_keys = False
         )
 
         code_quality_build = codebuild.PipelineProject(
-            self, 'CodeBuild',
+            self, 'Code Quality',
             build_spec = codebuild.BuildSpec.from_source_filename('./buildspec_test.yml'),
             environment = codebuild.BuildEnvironment(
                 build_image = codebuild.LinuxBuildImage.STANDARD_5_0,
@@ -82,54 +80,26 @@ class PipelineCdkStack(Stack):
             resources = ['*'],
         ))
 
-        ssmParameter = ssm.StringParameter(
-            self, 'SignerProfileARN',
-            parameter_name='signer-profile-arn',
-            string_value='arn:aws:signer:us-east-2:676393689272:/signing-profiles/ecr_signing_profile'
-        )
-   
-        docker_build_project.add_to_role_policy(iam.PolicyStatement(
-            effect = iam.Effect.ALLOW,
-            actions = [
-                'ssm:GetParametersByPath',
-                'ssm:GetParameters',
-            ],
-            resources = ['*'],
-        ))
-
-        docker_build_project.add_to_role_policy(iam.PolicyStatement(
-            effect = iam.Effect.ALLOW,
-            actions = [
-                'signer:PutSigningProfile',
-                'signer:SignPayload',
-                'signer:GetRevocationStatus'
-            ],
-            resources = ['*'],
-        ))
-
         source_output = codepipeline.Artifact()
         unit_test_output = codepipeline.Artifact()
         docker_build_output = codepipeline.Artifact()
 
-        source_action = codepipeline_actions.CodeStarConnectionsSourceAction(
-          action_name = 'GitHub',
-          owner = "mauropedra",
-          repo = "CICD_Workshop",
-          output = source_output,
-          branch = "main",
-          trigger_on_push = True,
-          connection_arn = "arn:aws:codeconnections:us-east-2:676393689272:connection/e35ed35a-01ed-4645-a89e-c6dc34a57ec9"
+        source_action = codepipeline_actions.CodeCommitSourceAction(
+            action_name = 'CodeCommit',
+            repository = repo,
+            output = source_output,
+            branch = 'main'
         )
 
         pipeline.add_stage(
-          stage_name = 'Source',
-          actions = [source_action]
+            stage_name = 'Source',
+            actions = [source_action]
         )
 
         build_action = codepipeline_actions.CodeBuildAction(
             action_name = 'Unit-Test',
             project = code_quality_build,
-            input = source_output,  # The build action must use the CodeStarConnectionsSourceAction output as input.
+            input = source_output,  # The build action must use the CodeCommitSourceAction output as input.
             outputs = [unit_test_output]
         )
 
@@ -154,19 +124,30 @@ class PipelineCdkStack(Stack):
             stage_name = 'Deploy-Test',
             actions = [
                 codepipeline_actions.EcsDeployAction(
-                    action_name = 'Deploy-Fargate-Test',
+                    action_name = 'Deploy-Test',
                     service = test_app_fargate.service,
                     input = docker_build_output
                 )
             ]
         )
 
-        CfnOutput(
-            self, 'SourceConnectionArn',
-            value = SourceConnection.attr_connection_arn
+        pipeline.add_stage(
+            stage_name = 'Deploy-Production',
+            actions = [
+                codepipeline_actions.ManualApprovalAction(
+                    action_name = 'Approve-Prod-Deploy',
+                    run_order = 1
+                ),
+                codepipeline_actions.EcsDeployAction(
+                    action_name = 'Deploy-Production',
+                    service = prod_app_fargate.service,
+                    input = docker_build_output,
+                    run_order = 2
+                )
+            ]
         )
 
         CfnOutput(
-            self, 'SourceConnectionStatus',
-            value = SourceConnection.attr_connection_status
+            self, 'CodeCommitRepositoryUrl',
+            value = repo.repository_clone_url_grc
         )
